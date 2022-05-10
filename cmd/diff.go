@@ -14,15 +14,19 @@ func Quant(f string) color.Palette {
 		fmt.Println("Couldn't open file")
 		return
 	}
+
 	i, _, err := image.Decode(file)
 	if err != nil {
 		fmt.Println("Couldn't decode file")
 		return
 	}
+
 	q := MedianCutQuantizer{}
 	p := q.Quantize(make([]color.Color, 0, 256), i)
-	fmt.Println(p)
 	return p
 }
 
-// Quantize using median cut method
+func Diff() {
+}
+
+// Convert RGB color to Pantone matching system (PMS)

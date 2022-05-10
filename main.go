@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	diff "andygo/cmd"
+	"pmt/cmd/diff"
 
 	"github.com/ericpauley/go-quantize/quantize"
 )
@@ -67,6 +67,7 @@ func getPalette(file string) *image.Image {
 }
 
 func main() {
-	f := "penis"
-	diff.Quant(f)
+	x := ""
+	diff.Quant(x)
+	return x
 }
