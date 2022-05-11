@@ -9,7 +9,10 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"log"
 	"os"
+
+	"github.com/mccutchen/palettor"
 )
 
 var usage = `Usage: pmt [options...] [FOLDER]
@@ -21,68 +24,54 @@ var (
 	c = flag.Bool("c", true, "")
 )
 
-type Spread struct {
-	Folder string   `json:"folder"`
-	Images []string `json:"images"`
+type Sheet struct {
+	Color  color.Color `json:"color"`
+	Weight float64     `json:"weight"`
+	Hex    string      `json:"hex"`
+	PMS    string      `json:"pms"`
 }
 
-/* Layout ready image type
-type photo struct {
-	width  int
-	height int
-	format string
-	pal    palette.Palette
-} */
-
-var subimages []image.Image // RGBA, etc. images
-
-type sheet struct {
-	name string
-	w    int
-	h    int
-	pal  color.Palette
-}
+type Spread struct{}
 
 func main() {
+	testImage := "img/illustrations/5.jpg"
+	testPalette := palFromImage(testImage, 6)
+
+	for _, col := range testPalette.Colors() {
+		fmt.Printf("color: %v; weight: %v\n", col, testPalette.Weight(col))
+	}
 }
 
-func palFromImg(name string) (color.Palette, error) {
+// for colors in palette, convert to hex (and pantone)
+/* func palToHex(p palettor.Palette) (color.Color, float64) {
+	// out := []string{}
+	for _, color := range p.Colors() {
+		return color, p.Weight(color)
+	}
+} */
+
+func palFromImage(name string, k int) *palettor.Palette {
 	file, err := os.Open(name)
+	im, _, err := image.Decode(file)
 	if err != nil {
 		fmt.Println("Couldn't open file")
 	}
-	im, _, err := image.Decode(file)
+	defer file.Close()
+
+	// k = num of most dominant colors
+	maxIterations := 100 // num of iterations until halt
+	pal, err := palettor.Extract(k, maxIterations, im)
 	if err != nil {
-		fmt.Println("Couldn't decode test file")
+		log.Fatalf("Image too small")
 	}
-
-	q := MedianCutQuantizer{}
-	p := q.Quantize(make([]color.Color, 0, 256), im)
-	if err != nil {
-		fmt.Println("Couldn't quantize image")
-	}
-
-	return p, nil
-}
-
-func fetchPalettes(sheet []string) ([]MedianCutQuantizer, error) {
-	sheet := []MedianCutQuantizer{}
-	for _, n := range sheet {
-		sheet = append(sheet, palFromImg(n))
-	}
-	if err != nil {
-		fmt.Println("Couldn't create pallete from image")
-		return
-	}
-
-	return sheet, nil
+	return pal
 }
 
 // Get images from dir
-func fetchImages(folder string) ([]string, error) {
+func fetchImages(folder string) []string {
 	files, err := os.ReadDir(folder)
 	if err != nil {
-		return nil, err
+		fmt.Println("Couldn't open folder")
 	}
 	out := []string{}
 	for _, f := range files {
@@ -91,11 +80,9 @@ func fetchImages(folder string) ([]string, error) {
 		}
 		out = append(out, f.Name())
 	}
-	return out, nil
+	return out
 }
 
-/* test if file has image extension
-func isImage(name string) bool {
-	ext := strings.ToLower(filepath.Ext(name))
-	return (ext == ".gif" || ext == ".jpg" || ".jpeg" || ext == ".png")
-} */
+// json file w/ palette and converted hex/pms codes
+var page = `
+`
