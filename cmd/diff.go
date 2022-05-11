@@ -12,13 +12,11 @@ func Quant(f string) color.Palette {
 	file, err := os.Open(f)
 	if err != nil {
 		fmt.Println("Couldn't open file")
-		return
 	}
 
 	i, _, err := image.Decode(file)
 	if err != nil {
 		fmt.Println("Couldn't decode file")
-		return
 	}
 
 	q := MedianCutQuantizer{}

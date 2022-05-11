@@ -3,14 +3,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"image"
+	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/ericpauley/go-quantize/quantize"
 )
 
 var usage = `Usage: pmt [options...] [FOLDER]
@@ -19,7 +18,7 @@ options:
 `
 
 var (
-	n = flag.Bool("n", asCSS, "")
+	c = flag.Bool("c", true, "")
 )
 
 type Spread struct {
@@ -35,29 +34,68 @@ type photo struct {
 	pal    palette.Palette
 } */
 
+var subimages []image.Image // RGBA, etc. images
+
+type sheet struct {
+	name string
+	w    int
+	h    int
+	pal  color.Palette
+}
+
 func main() {
-	r := 100
-	return r
+}
+
+func palFromImg(name string) (color.Palette, error) {
+	file, err := os.Open(name)
+	if err != nil {
+		fmt.Println("Couldn't open file")
+	}
+	im, _, err := image.Decode(file)
+	if err != nil {
+		fmt.Println("Couldn't decode test file")
+	}
+
+	q := MedianCutQuantizer{}
+	p := q.Quantize(make([]color.Color, 0, 256), im)
+	if err != nil {
+		fmt.Println("Couldn't quantize image")
+	}
+
+	return p, nil
+}
+
+func fetchPalettes(sheet []string) ([]MedianCutQuantizer, error) {
+	sheet := []MedianCutQuantizer{}
+	for _, n := range sheet {
+		sheet = append(sheet, palFromImg(n))
+	}
+	if err != nil {
+		fmt.Println("Couldn't create pallete from image")
+		return
+	}
+
+	return sheet, nil
 }
 
 // Get images from dir
-func loadDir(folder string) ([]string, error) {
+func fetchImages(folder string) ([]string, error) {
 	files, err := os.ReadDir(folder)
 	if err != nil {
 		return nil, err
 	}
 	out := []string{}
 	for _, f := range files {
-		if f.IsDir() || !isImage(f.Name()) {
+		if f.IsDir() {
 			continue
 		}
 		out = append(out, f.Name())
 	}
-	quantize.MedianCutQuantizer(out)
 	return out, nil
 }
 
+/* test if file has image extension
 func isImage(name string) bool {
 	ext := strings.ToLower(filepath.Ext(name))
 	return (ext == ".gif" || ext == ".jpg" || ".jpeg" || ext == ".png")
-}
+} */
