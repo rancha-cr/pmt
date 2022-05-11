@@ -71,8 +71,8 @@ func main() {
 
 	easel := palFromImage(inp, 6)
 	colorList := []string{}
-	for _, s := range easel {
-		colorList = append(convertColors(easel[s]))
+	for _, s := range easel.Colors() {
+		colorList = append(colorList, convertColors(s))
 	}
 
 	spread := struct {
