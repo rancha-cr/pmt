@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"image"
@@ -10,53 +11,116 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/mccutchen/palettor"
+	"github.com/nfnt/resize"
 )
 
-var usage = `Usage: pmt [options...] [FOLDER]
-options:
-    -c    Export converted palette as blank css
-`
-
-var (
-	c = flag.Bool("c", true, "")
-)
-
-type Sheet struct {
-	Color  color.Color `json:"color"`
-	Weight float64     `json:"weight"`
-	Hex    string      `json:"hex"`
-	PMS    string      `json:"pms"`
+type Swatch struct {
+	Pantone string `json:"pantone"`
+	PMS     string `json:"pms"`
+	Hex     string `json:"hex"`
 }
 
-type Spread struct{}
+/* type Sheet struct {
+	Filepath string      `json:"color"`
+	Color    color.Color `json:"color"`
+	Weight   float64     `json:"weight"`
+	Hex      string      `json:"hex"`
+	PMS      string      `json:"pms"`
+} */
 
 func main() {
-	testImage := "img/illustrations/5.jpg"
-	testPalette := palFromImage(testImage, 6)
-
-	for _, col := range testPalette.Colors() {
-		fmt.Printf("color: %v; weight: %v\n", col, testPalette.Weight(col))
+	var (
+		k = flag.Int("k", 6, "Palette size (default: 6")
+		//		jsonOutput = flag.Bool("json", false, "Output as JSON")
+	)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] [INPUT]\n\n", os.Args[0])
+		flag.PrintDefaults()
 	}
+	flag.Parse()
+
+	inputPath := "img/illustrations/4.jpg"
+	if flag.NArg() > 0 {
+		inputPath = flag.Args()[0]
+	}
+
+	inp, err := filepath.Abs(inputPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "filepath error")
+		return
+	}
+	/*  src, err := os.Stat(folder)
+	    if err != nil {
+	        fmt.Fprintln(os.Stderr, "directory does not exist")
+	        return
+	    }
+	    if !src.IsDir() {
+	        fmt.Fprintln(os.Stderr, "path is not a directory")
+	        return
+	    } */
+	num := *k
+	if num < 0 {
+		fmt.Fprintln(os.Stderr, "k cannot be smaller than 0")
+		return
+	}
+
+	spread := struct {
+		Image   string `json:"image"`
+		Pantone string `json:"pantone"`
+		PMS     string `json:"pms"`
+	}{
+		filepath.Base(inp),
+		"blue",  //placeholder
+		"422-c", //placeholder
+	}
+
+	http.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(inp, r.URL.Path[3:]))
+	})
+	http.HandleFunc("/data.json", func(w http.ResponseWriter, r *http.Request) {
+		js, err := json.Marshal(spread)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+	})
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, page)
+	})
+
+	fmt.Print("Serving on http://localhost:2222")
+	http.ListenAndServe(":2222", nil)
 }
 
 // for colors in palette, convert to hex (and pantone)
-/* func palToHex(p palettor.Palette) (color.Color, float64) {
-	// out := []string{}
-	for _, color := range p.Colors() {
-		return color, p.Weight(color)
-	}
-} */
+func convertColors(c color.Color) string {
+	s := Swatch{}
+	r, g, b, a := c.RGBA()
+
+	s.Pantone = ""
+	s.PMS = ""
+	s.Hex = fmt.Sprintf("#%02x%02x%02x", r, g, b, a)
+
+	return s.Hex
+}
 
 func palFromImage(name string, k int) *palettor.Palette {
 	file, err := os.Open(name)
-	im, _, err := image.Decode(file)
+	og, _, err := image.Decode(file)
 	if err != nil {
 		fmt.Println("Couldn't open file")
 	}
 	defer file.Close()
+
+	// reduce image size
+	im := resize.Thumbnail(200, 200, og, resize.Lanczos3)
 
 	// k = num of most dominant colors
 	maxIterations := 100 // num of iterations until halt
