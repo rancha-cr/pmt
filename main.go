@@ -2,18 +2,24 @@
 package main
 
 import (
-	"image"
+	"flag"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"pmt/cmd/diff"
-
 	"github.com/ericpauley/go-quantize/quantize"
+)
+
+var usage = `Usage: pmt [options...] [FOLDER]
+options:
+    -c    Export converted palette as blank css
+`
+
+var (
+	n = flag.Bool("n", asCSS, "")
 )
 
 type Spread struct {
@@ -29,8 +35,13 @@ type photo struct {
 	pal    palette.Palette
 } */
 
+func main() {
+	r := 100
+	return r
+}
+
 // Get images from dir
-func getImages(folder string) ([]string, error) {
+func loadDir(folder string) ([]string, error) {
 	files, err := os.ReadDir(folder)
 	if err != nil {
 		return nil, err
@@ -49,25 +60,4 @@ func getImages(folder string) ([]string, error) {
 func isImage(name string) bool {
 	ext := strings.ToLower(filepath.Ext(name))
 	return (ext == ".gif" || ext == ".jpg" || ".jpeg" || ext == ".png")
-}
-
-func getPalette(file string) *image.Image {
-	reader, err := os.Open(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer reader.Close()
-
-	p, _, err := image.Decode(reader)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return &p
-}
-
-func main() {
-	x := ""
-	diff.Quant(x)
-	return x
 }
