@@ -69,14 +69,28 @@ func main() {
 		return
 	}
 
+	easel := palFromImage(inp, 6)
+	colorList := []string{}
+	for _, s := range easel {
+		colorList = append(convertColors(easel[s]))
+	}
+
 	spread := struct {
-		Image   string `json:"image"`
-		Pantone string `json:"pantone"`
-		PMS     string `json:"pms"`
+		Image  string `json:"image"`
+		Color1 string `json:"color1"`
+		Color2 string `json:"color2"`
+		Color3 string `json:"color3"`
+		Color4 string `json:"color4"`
+		Color5 string `json:"color5"`
+		Color6 string `json:"color6"`
 	}{
 		filepath.Base(inp),
-		"blue",  //placeholder
-		"422-c", //placeholder
+		colorList[0],
+		colorList[1],
+		colorList[2],
+		colorList[3],
+		colorList[4],
+		colorList[5],
 	}
 
 	http.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
@@ -148,5 +162,87 @@ func fetchImages(folder string) []string {
 }
 
 // json file w/ palette and converted hex/pms codes
-var page = `
-`
+
+// html collage page
+var page = `<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Collage</title>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+		<script type="text/javascript">
+			$(function(){
+				$.getJSON( "data.json", function(data) {
+					document.title = "PMT • ";
+					for (image of data.image) {
+						$("#images").append("<img src='/i/"+image+"'></img>");
+					}
+					$images = $("#image img");
+					$section = $("#images");
+					$("#images img").click(function() {
+						if ($section.hasClass("dimmed")) {
+							$section.removeClass("dimmed");
+							$images.removeClass("dim");
+						} else {
+							$section.addClass("dimmed");
+							$images.not($(this)).addClass("dim");
+						}
+					});
+				});
+			});
+		</script>
+		<style type="text/css">
+			#images {
+				line-height: 0;
+				-webkit-column-count: 3;
+				-webkit-column-gap:   10px;
+				-moz-column-count:    3;
+				-moz-column-gap:      10px;
+				column-count:         3;
+				column-gap:           10px;  
+			}
+			#images img {
+				max-width: 100%;
+				height: auto;
+				margin-bottom: 10px;
+			}
+			#images img.dim {
+				opacity: 0.1;
+			}
+            #col1 {
+                border: 15px solid data.color1
+                font-size: 36px;
+            }
+            #col1 {
+                border: 15px solid data.color2
+                font-size: 36px;
+            }
+            #col1 {
+                border: 15px solid data.color3
+                font-size: 36px;
+            }
+            #col1 {
+                border: 15px solid data.color4
+                font-size: 36px;
+            }
+            #col1 {
+                border: 15px solid data.color5
+                font-size: 36px;
+            }
+            #col1 {
+                border: 15px solid data.color6
+                font-size: 36px;
+            }
+		</style>
+	</head>
+	<body>
+		<section id="images">
+		<div id="col1">1</div>
+		<div id="col2">2</div>
+		<div id="col3">3</div>
+		<div id="col4">4</div>
+		<div id="col5">5</div>
+		<div id="col6">6</div>
+		</section>
+	</body>
+</html>`
